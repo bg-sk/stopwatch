@@ -112,6 +112,8 @@ body::before{content:"";position:fixed;inset:0;height:var(--h,auto);z-index:-1;p
 .rn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hg .c,.rk{cursor:pointer}
 .nmx{white-space:nowrap;display:inline-block;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis}.hg .c{overflow:hidden}.hg .c>span{max-width:100%;white-space:nowrap}.sl h2 svg{flex:none}
 .hg .hn{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mut);line-height:1.2;margin-bottom:1px}
+body.photo::before{background:linear-gradient(rgba(0,0,0,var(--dim,.35)),rgba(0,0,0,var(--dim,.35))),var(--bgimg) center/cover no-repeat}
+.rg{width:100%;accent-color:#fff;margin:0 0 14px}.dlg .acts.col{flex-direction:column}
 </style></head>
 <body>
 <div id="app">
@@ -121,6 +123,7 @@ body::before{content:"";position:fixed;inset:0;height:var(--h,auto);z-index:-1;p
  <div class="scroll"><div id="grid"></div></div>
  <div class="bar" id="bar"></div>
 </div>
+<input type="file" accept="image/*" id="bgf" style="display:none">
 <div class="ov" id="ov"><div class="dlg" id="dlg"></div></div>
 <script>
 const $=s=>document.querySelector(s),pad=n=>String(n).padStart(2,"0");
@@ -242,7 +245,24 @@ function histName(h,c,mode){
  const fin=ok=>{if(ok){c.n=i.value.trim();hsave()}histView(h.id,mode)};
  i.onkeydown=e=>{if(e.key==="Enter")fin(true)};
  $("#dlg").onclick=e=>{const t=e.target.closest("button");if(t)fin(t.id==="ok")}}
-$("#hist").onclick=histList;
+const BK="tss.bg";let BG={img:"",dim:.35};try{const o=JSON.parse(localStorage.getItem(BK)||"null");if(o&&typeof o==="object")BG=Object.assign(BG,o)}catch(e){}
+const bsave=()=>{try{localStorage.setItem(BK,JSON.stringify(BG));return true}catch(e){return false}};
+function applyBg(){const r=document.documentElement.style;if(BG.img){r.setProperty("--bgimg",'url("'+BG.img+'")');r.setProperty("--dim",BG.dim);document.body.classList.add("photo")}else document.body.classList.remove("photo")}
+function bgDialog(msg){
+ open(`<h2>Background</h2><p>${msg||"Use your own photo behind the app."}</p>${BG.img?`<p style="margin:0 0 6px">Dim</p><input type="range" class="rg" id="dm" min="0" max="80" value="${Math.round(BG.dim*100)}">`:""}<div class="acts ctr col"><button class="pr" id="ch">Choose Photo</button>${BG.img?'<button class="pr" id="rm">Remove Photo</button>':""}<button class="pr" id="cx">Done</button></div>`);
+ const dm=$("#dm");if(dm){dm.oninput=()=>{BG.dim=dm.value/100;document.documentElement.style.setProperty("--dim",BG.dim)};dm.onchange=bsave}
+ $("#dlg").onclick=e=>{const t=e.target.closest("button");if(!t)return;
+  if(t.id==="cx")close();else if(t.id==="rm"){BG.img="";bsave();applyBg();bgDialog()}else if(t.id==="ch")$("#bgf").click()}}
+async function loadImg(f){try{return await createImageBitmap(f,{imageOrientation:"from-image"})}catch(e){return await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(f)})}}
+$("#bgf").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+ try{const im=await loadImg(f),w=im.width||im.naturalWidth,h=im.height||im.naturalHeight,sc=Math.min(1,1400/Math.max(w,h)),c=document.createElement("canvas");
+  c.width=Math.round(w*sc);c.height=Math.round(h*sc);c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+  const old=BG.img;BG.img=c.toDataURL("image/jpeg",.82);
+  if(!bsave()){BG.img=old;applyBg();bgDialog("That photo is too large to save. Try a smaller one.");return}
+  applyBg();bgDialog("Background saved.")}catch(err){bgDialog("Couldn't read that photo.")}};
+applyBg();
+const hb2=$("#hist");lp(hb2,bgDialog,600);
+$("#hist").onclick=()=>{if(hb2._lp){hb2._lp=0;return}histList()};
 let wl=null;async function awake(){try{if(navigator.wakeLock&&!wl){wl=await navigator.wakeLock.request("screen");wl.addEventListener("release",()=>wl=null)}}catch(e){}}
 $("#tiles").onclick=e=>{const t=e.target.closest(".tile");if(t)picker(t.dataset.k)};
 const grid=$("#grid"),keyOf=c=>c.dataset.r+","+c.dataset.l;
