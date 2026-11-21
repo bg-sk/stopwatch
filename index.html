@@ -112,7 +112,7 @@ body::before{content:"";position:fixed;top:0;left:0;right:0;height:calc(var(--h,
 .rn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hg .c,.rk{cursor:pointer}
 .nmx{white-space:nowrap;display:inline-block;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis}.hg .c{overflow:hidden}.hg .c>span{max-width:100%;white-space:nowrap}.sl h2 svg{flex:none}
 .hg .hn{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mut);line-height:1.2;margin-bottom:1px}
-body.photo::before{background:linear-gradient(rgba(0,0,0,var(--dim,.35)),rgba(0,0,0,var(--dim,.35))),var(--bgimg) center/cover no-repeat}
+html.photo{background:var(--edge,#000)}body.photo{background:transparent}body.photo::before{background:linear-gradient(rgba(0,0,0,var(--dim,.35)),rgba(0,0,0,var(--dim,.35))),var(--bgimg) center/cover no-repeat}
 .rg{width:100%;accent-color:#fff;margin:0 0 14px}.dlg .acts.col{flex-direction:column}
 </style></head>
 <body>
@@ -247,17 +247,21 @@ function histName(h,c,mode){
  $("#dlg").onclick=e=>{const t=e.target.closest("button");if(t)fin(t.id==="ok")}}
 const BK="tss.bg";let BG={img:"",dim:.35};try{const o=JSON.parse(localStorage.getItem(BK)||"null");if(o&&typeof o==="object")BG=Object.assign(BG,o)}catch(e){}
 const bsave=()=>{try{localStorage.setItem(BK,JSON.stringify(BG));return true}catch(e){return false}};
-function applyBg(){const r=document.documentElement.style;if(BG.img){r.setProperty("--bgimg",'url("'+BG.img+'")');r.setProperty("--dim",BG.dim);document.body.classList.add("photo")}else document.body.classList.remove("photo")}
+function edgeVar(){const d=1-BG.dim,e=BG.edge||[0,0,0];return "rgb("+e.map(v=>Math.round(v*d)).join(",")+")"}
+function calcEdge(i){const c=document.createElement("canvas");c.width=40;c.height=4;const x=c.getContext("2d");x.drawImage(i,0,i.naturalHeight*.97,i.naturalWidth,i.naturalHeight*.03,0,0,40,4);const d=x.getImageData(0,0,40,4).data;let r=0,g=0,b=0;const n=d.length/4;for(let k=0;k<d.length;k+=4){r+=d[k];g+=d[k+1];b+=d[k+2]}return[r/n,g/n,b/n]}
+function applyBg(){const de=document.documentElement,r=de.style;if(BG.img){r.setProperty("--bgimg",'url("'+BG.img+'")');r.setProperty("--dim",BG.dim);r.setProperty("--edge",edgeVar());de.classList.add("photo");document.body.classList.add("photo");
+ if(!BG.edge){const i=new Image();i.onload=()=>{try{BG.edge=calcEdge(i);bsave();r.setProperty("--edge",edgeVar())}catch(e){}};i.src=BG.img}}else{de.classList.remove("photo");document.body.classList.remove("photo")}}
+function diag(){const pr=document.createElement("div");pr.style.cssText="position:fixed;visibility:hidden;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)";document.body.appendChild(pr);const cs=getComputedStyle(pr),t=cs.paddingTop,b=cs.paddingBottom;pr.remove();const vv=window.visualViewport;return "inner "+innerWidth+"×"+innerHeight+" · screen "+screen.width+"×"+screen.height+" · vv "+(vv?Math.round(vv.height):"-")+" · inset "+t+"/"+b+" · standalone "+navigator.standalone}
 function bgDialog(msg){
- open(`<h2>Background</h2><p>${msg||"Use your own photo behind the app."}</p>${BG.img?`<p style="margin:0 0 6px">Dim</p><input type="range" class="rg" id="dm" min="0" max="80" value="${Math.round(BG.dim*100)}">`:""}<div class="acts ctr col"><button class="pr" id="ch">Choose Photo</button>${BG.img?'<button class="pr" id="rm">Remove Photo</button>':""}<button class="pr" id="cx">Done</button></div>`);
- const dm=$("#dm");if(dm){dm.oninput=()=>{BG.dim=dm.value/100;document.documentElement.style.setProperty("--dim",BG.dim)};dm.onchange=bsave}
+ open(`<h2>Background</h2><p>${msg||"Use your own photo behind the app."}</p>${BG.img?`<p style="margin:0 0 6px">Dim</p><input type="range" class="rg" id="dm" min="0" max="80" value="${Math.round(BG.dim*100)}">`:""}<div class="acts ctr col"><button class="pr" id="ch">Choose Photo</button>${BG.img?'<button class="pr" id="rm">Remove Photo</button>':""}<button class="pr" id="cx">Done</button></div><p style="font-size:11px;color:var(--mut);margin:12px 0 0;line-height:1.4">${diag()}</p>`);
+ const dm=$("#dm");if(dm){dm.oninput=()=>{BG.dim=dm.value/100;document.documentElement.style.setProperty("--dim",BG.dim);document.documentElement.style.setProperty("--edge",edgeVar())};dm.onchange=bsave}
  $("#dlg").onclick=e=>{const t=e.target.closest("button");if(!t)return;
   if(t.id==="cx")close();else if(t.id==="rm"){BG.img="";bsave();applyBg();bgDialog()}else if(t.id==="ch")$("#bgf").click()}}
 async function loadImg(f){try{return await createImageBitmap(f,{imageOrientation:"from-image"})}catch(e){return await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(f)})}}
 $("#bgf").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
  try{const im=await loadImg(f),w=im.width||im.naturalWidth,h=im.height||im.naturalHeight,sc=Math.min(1,1400/Math.max(w,h)),c=document.createElement("canvas");
   c.width=Math.round(w*sc);c.height=Math.round(h*sc);c.getContext("2d").drawImage(im,0,0,c.width,c.height);
-  const old=BG.img;BG.img=c.toDataURL("image/jpeg",.82);
+  const old=BG.img;BG.img=c.toDataURL("image/jpeg",.82);BG.edge=null;
   if(!bsave()){BG.img=old;applyBg();bgDialog("That photo is too large to save. Try a smaller one.");return}
   applyBg();bgDialog("Background saved.")}catch(err){bgDialog("Couldn't read that photo.")}};
 applyBg();
